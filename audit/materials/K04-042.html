@@ -1,0 +1,38 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>K04-042</title><style>body{font:17px/1.55 system-ui,sans-serif;color:#182332;background:#f5f7fa;margin:0}main{max-width:1050px;margin:auto;padding:28px}section{background:white;padding:24px;border-radius:12px;margin:18px 0}img{max-width:100%;height:auto}pre{white-space:pre-wrap;font:15px/1.65 ui-monospace,Consolas,monospace}a{color:#1557a0}nav{display:flex;gap:20px;flex-wrap:wrap}.cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}li{padding:4px}h1{line-height:1.2}code{background:#eef2f6;padding:2px 5px}</style><main><nav><a href="index.html">Все объекты</a> <a href="../instruction.md">Инструкция</a> <a href="K04-041.html">Предыдущий</a> <a href="K04-043.html">Следующий</a></nav><h1>K04-042</h1><p>Группа: second. Оцените только указанную последовательность действий.</p><section><h2>Начальная карта</h2><img src="maps/K04-042.png" alt="Начальная карта с координатами. Красный треугольник — агент."><p>Красный треугольник — агент, его вершина показывает направление взгляда. Цвета дверей и предметов уточнены ниже.</p></section><section><h2>Условие и действия</h2><pre>Цель: взять мяч в руки.
+Координаты (x, y): x растёт вправо, y растёт вниз; верхняя левая клетка (0, 0).
+Размер карты: 16 x 6.
+Агент: (7, 2), смотрит вверх (север).
+В руках: ничего.
+Лимит: 1080 действий с начала эпизода; счётчик сейчас 0.
+Предметы и двери:
+(10, 1): дверь, цвет зелёный, заперта
+(3, 2): мяч, цвет красный
+(13, 2): ключ, цвет красный
+(5, 3): дверь, цвет красный, заперта
+(7, 4): ключ, цвет зелёный
+
+Карта: # стена, . пусто, D дверь, K ключ, B мяч, &gt;v&lt;^ агент.
+   00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15
+00  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+01  #  .  .  .  .  #  .  .  .  .  D  .  .  .  .  #
+02  #  .  .  B  .  #  .  ^  .  .  #  .  .  K  .  #
+03  #  .  .  .  .  D  .  .  .  .  #  .  .  .  .  #
+04  #  .  .  .  .  #  .  K  .  .  #  .  .  .  .  #
+05  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+
+Последовательность действий:
+1. left — Поворот налево
+2. left — Поворот налево
+3. forward — Шаг вперёд
+4. right — Поворот направо
+5. pickup — Взять предмет
+6. forward — Шаг вперёд
+7. toggle — Открыть/закрыть дверь
+8. forward — Шаг вперёд
+9. forward — Шаг вперёд
+10. forward — Шаг вперёд
+11. drop — Положить предмет
+12. right — Поворот направо
+13. pickup — Взять предмет
+
+Вопрос: будет ли мяч взят до конца этой последовательности и до тайм-аута? Метка: success или failure.</pre></section><section><h2>Как записать ответ</h2><p>В своей строке annotations.csv укажите <code>success</code> или <code>failure</code> и время в секундах. Страница не сохраняет ответы. Не обсуждайте метку с другими до сохранения своего суждения.</p><p>Оценивайте по настоящим правилам MiniGrid из инструкции. Не запускайте модели и не ищите машинные вердикты.</p></section></main></html>

@@ -3,7 +3,7 @@ import argparse
 import gymnasium as gym
 from PIL import Image
 
-from bfs import ENV_ID, solve
+from scripts.bfs import ENV_ID, solve
 
 
 def play(seed, fps=30, out=None):
