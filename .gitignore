@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Blind audit: keep machine verdicts outside the shared repository until labeling ends.
+scorer.jsonl
+/private/

@@ -3,7 +3,7 @@ import unittest
 import gymnasium as gym
 from minigrid.core.world_object import Key
 
-from bfs import (
+from scripts.bfs import (
     CLOSED, DIRECTIONS, DROP, FORWARD, LOCKED, OPEN, PICKUP, TOGGLE,
     ENV_ID, evaluate, read_world, replay_result, solve,
     transition_baseline, transition_full,

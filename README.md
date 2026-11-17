@@ -38,7 +38,7 @@
 
 ## Сравнение моделей BFS
 
-`python bfs.py --seeds 10` запускает полный BFS (`full`) и упрощённый
+`python -m scripts.bfs --seeds 10` запускает полный BFS (`full`) и упрощённый
 (`baseline`) на одинаковых начальных картах. Каждый план отдельно проверяется
 в настоящей MiniGrid с тем же seed. Вывод содержит длину плана, реальный успех,
 число выполненных шагов и совпадение успеха и длины (`match`). Итоговое состояние
@@ -67,8 +67,8 @@
    из слепого аудита, поскольку их результаты уже обсуждались. Разные seeds
    не гарантируют уникальность — сравнивать содержимое конфигураций.
 3. Подготовить траектории и входные файлы: `slice.jsonl` (20 `core`,
-   32 `second`), `instruction.md` версии 1.0 по `instruction_template.md`,
-   отдельно скрытый `scorer.jsonl`. Шаблон уже находится в корне проекта;
+   32 `second`), `instruction.md` версии 1.0 по `templates/instruction_template.md`,
+   отдельно скрытый `scorer.jsonl`. Шаблон находится в `templates/instruction_template.md`;
    на этапе 1 его содержание не изменялось.
 4. Провести независимую человеческую разметку: все трое размечают 20 `core`,
    каждому назначаются 4–8 дополнительных объектов; первые 10 — пилот.
@@ -118,12 +118,12 @@
 оценённых траекторий; вывод содержит и этот счётчик, и запрошенное число seeds.
 
 ```powershell
-python bfs.py --audit --plan-source full --seeds 3
-python bfs.py --audit --plan-source baseline --seeds 3
-python -m unittest -v test_bfs
+python -m scripts.bfs --audit --plan-source full --seeds 3
+python -m scripts.bfs --audit --plan-source baseline --seeds 3
+python -m unittest discover -s tests -v
 ```
 
-Исходный режим `python bfs.py --seeds 3` по-прежнему сравнивает собственные
+Исходный режим `python -m scripts.bfs --seeds 3` по-прежнему сравнивает собственные
 планы двух планировщиков. Он не заменяет аудит одинаковых траекторий.
 
 ### Окружение и проверка пункта 1
@@ -139,8 +139,8 @@ Gymnasium 1.4.0 завершался ошибкой `typing`. Требовани
 ```powershell
 py -3.15 -m venv .venv/newer
 .\.venv\newer\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\newer\Scripts\python.exe -B -m unittest -v test_bfs
-.\.venv\newer\Scripts\python.exe -B bfs.py --audit --plan-source baseline --seeds 3
+.\.venv\newer\Scripts\python.exe -B -m unittest discover -s tests -v
+.\.venv\newer\Scripts\python.exe -B -m scripts.bfs --audit --plan-source baseline --seeds 3
 ```
 
 Результаты технических проверок (не результаты человеческого аудита):
@@ -171,3 +171,54 @@ py -3.15 -m venv .venv/newer
 
 52 объекта, разметка и зонды на этапе 1 не создавались. Результаты seeds 0–2
 используются только для разработки; их не включаем в независимый слепой срез.
+
+
+## Структура репозитория
+
+Все команды выполняются из корня репозитория. Исполняемый код находится
+в `scripts/`, проверки — в `tests/`. Скрипты запускаются как модули:
+`python -m scripts.bfs`, `python -m scripts.render`.
+
+```text
+project/
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── scripts/
+│   ├── __init__.py
+│   ├── bfs.py                    # поиск, модели и оценка готовых планов
+│   └── render.py                 # просмотр и GIF выполнения плана
+├── tests/
+│   ├── __init__.py
+│   └── test_bfs.py
+├── templates/
+│   └── instruction_template.md   # исходный шаблон разметки
+├── audit/                       # единая папка аудита команды
+│   └── .gitkeep
+└── notebooks/                   # личные заполненные учебные ноутбуки
+    └── .gitkeep
+```
+
+В `audit/` по мере выполнения практикума появятся файлы с точными именами:
+
+| Файл | Когда и откуда появляется |
+|---|---|
+| `slice.jsonl` | Команда готовит 52 объекта до разметки |
+| `instruction.md` | Команда заполняет шаблон, исходная версия 1.0 |
+| `annotations.csv` | Создаётся учебным ноутбуком, заполняется людьми |
+| `baseline_predictions.csv` | Создаётся учебным ноутбуком, заполняется вердиктами baseline |
+| `probe_results.csv` | Создаётся учебным ноутбуком, заполняется результатами зондов |
+| `scorer.jsonl` | Для дорожки A добавляется только после завершения всей разметки |
+
+Имена `slice.jsonl` и `instruction.md` после подготовки сохраняются.
+Не создаём пустые файлы с этими именами, чтобы не выдавать за готовые данные.
+До окончания разметки `scorer.jsonl` хранит куратор либо ответственный,
+не участвующий в разметке, вне общей папки и истории репозитория.
+В `.gitignore` добавлены `scorer.jsonl` и `/private/` как защита от случайного
+коммита, но Git ignore не ограничивает доступ к файлам. После разметки
+реальный `scorer.jsonl` переносится в `audit/` и осознанно добавляется в Git
+через `git add -f audit/scorer.jsonl`.
+
+Перенос кода и шаблона — отдельный организационный коммит перед пунктом 2.
+Исходное содержание шаблона сохранено. Проверка после переноса:
+`python -m unittest discover -s tests -v` и запуск `--help` обоих скриптов.
