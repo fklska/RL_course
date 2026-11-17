@@ -1,0 +1,3 @@
+gymnasium==1.4.0
+minigrid==3.2.0
+pillow==13.0.0
