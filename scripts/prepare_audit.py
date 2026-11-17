@@ -4,12 +4,11 @@ import argparse
 from html import escape
 import json
 from pathlib import Path
-import random
 
 import gymnasium as gym
 from PIL import Image, ImageDraw
 
-from scripts.bfs import ENV_ID, solve, transition_baseline, transition_full
+from scripts.bfs import ENV_ID, solve, transition_baseline
 from scripts.generate_configurations import verify_records, write_records
 
 ACTION_NAMES = ("left", "right", "forward", "pickup", "drop", "toggle")
@@ -17,7 +16,6 @@ ACTION_RU = ("Поворот налево", "Поворот направо", "Ш
 DIRECTION_RU = ("вправо (восток)", "вниз (юг)", "влево (запад)", "вверх (север)")
 COLOR_RU = {"red": "красный", "green": "зелёный", "blue": "синий", "purple": "фиолетовый", "yellow": "жёлтый", "grey": "серый"}
 TYPE_RU = {"key": "ключ", "ball": "мяч", "door": "дверь"}
-SPLIT_SEEDS = {"core": 2026111701, "second": 2026111702}
 
 
 def read_jsonl(path):
@@ -25,27 +23,11 @@ def read_jsonl(path):
         return [json.loads(line) for line in source]
 
 
-def source_schedule(records):
-    """Fix a mixture before any predictions: 1/2 full, 1/4 baseline, 1/4 prefix."""
-    schedule = {}
-    for group, seed in SPLIT_SEEDS.items():
-        members = [r for r in records if r["group"] == group]
-        if len(members) % 4:
-            raise ValueError("Each group size must be divisible by four")
-        quarter = len(members) // 4
-        sources = ["full"] * (2 * quarter) + ["baseline"] * quarter + ["prefix"] * quarter
-        random.Random(seed).shuffle(sources)
-        schedule.update((r["id"], source) for r, source in zip(members, sources))
-    return schedule
-
-
-def make_actions(env, source):
-    model = transition_baseline if source == "baseline" else transition_full
-    actions = solve(env, model)
+def make_actions(env):
+    """Use the complete baseline BFS plan for every audit configuration."""
+    actions = solve(env, transition_baseline)
     if not actions:
-        raise RuntimeError("Planner did not produce a nonempty plan; do not silently replace cases")
-    if source == "prefix":
-        actions = actions[:max(1, len(actions) // 2)]
+        raise RuntimeError("Baseline planner did not produce a nonempty plan; do not silently replace cases")
     return actions
 
 
@@ -151,14 +133,12 @@ def write_text_once(path, content):
 def prepare(configurations_path, audit_dir):
     configurations = read_jsonl(configurations_path)
     verify_records(configurations)
-    schedule = source_schedule(configurations)
     records, images = [], []
-    # Plan sources are not exported into annotator cards or JSONL.
     for config in configurations:
         env = gym.make(ENV_ID)
         try:
             env.reset(seed=config["seed"])
-            actions = make_actions(env, schedule[config["id"]])
+            actions = make_actions(env)
             records.append({
                 "id": config["id"], "group": config["group"],
                 "env_id": config["env_id"], "seed": config["seed"],

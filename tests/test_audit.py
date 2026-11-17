@@ -9,12 +9,13 @@ from unittest.mock import patch
 import gymnasium as gym
 from PIL import Image
 
+from scripts.bfs import solve, transition_baseline
 from scripts.export_predictions import (
     PUBLIC_FIELDS, REPOSITORY, export_predictions, validate_destination, validate_slice,
 )
 from scripts.prepare_audit import (
     ACTION_NAMES, case_html, index_html, make_actions, map_image,
-    read_jsonl, source_schedule, write_text_once,
+    read_jsonl, write_text_once,
 )
 
 
@@ -38,13 +39,16 @@ class AuditTests(unittest.TestCase):
             for step, action in enumerate(record["actions"], start=1):
                 self.assertIn(f"{step}. {ACTION_NAMES[action]} —", record["content"])
 
-    def test_mixture_is_fixed_before_evaluation(self):
-        schedule = source_schedule(self.configurations)
-        self.assertEqual(schedule, source_schedule(self.configurations))
-        for group, expected in (("core", (10, 5, 5)), ("second", (16, 8, 8))):
-            counts = tuple(sum(schedule[r["id"]] == source for r in self.configurations if r["group"] == group)
-                           for source in ("full", "baseline", "prefix"))
-            self.assertEqual(counts, expected)
+    def test_all_52_plans_are_complete_baseline_plans(self):
+        for record in self.records:
+            env = gym.make(record["env_id"])
+            try:
+                env.reset(seed=record["seed"])
+                expected = solve(env, transition_baseline)
+                self.assertIsNotNone(expected, record["id"])
+                self.assertEqual(record["actions"], expected, record["id"])
+            finally:
+                env.close()
 
     def test_all_cards_and_maps_exist_and_match_the_slice(self):
         materials = REPOSITORY / "audit/materials"
@@ -97,12 +101,13 @@ class AuditTests(unittest.TestCase):
                 self.assertEqual(evaluator.call_args.args[1], [0, 1])
             self.assertEqual(read_jsonl(output), [{"id": "test-id", "verdict": "failure"}])
 
-    def test_prefix_plan_is_fixed_and_missing_plan_is_not_replaced(self):
-        with patch("scripts.prepare_audit.solve", return_value=[0, 1, 2, 3]):
-            self.assertEqual(make_actions(None, "prefix"), [0, 1])
+    def test_baseline_plan_is_not_shortened_or_replaced(self):
+        with patch("scripts.prepare_audit.solve", return_value=[0, 1, 2, 3]) as planner:
+            self.assertEqual(make_actions(None), [0, 1, 2, 3])
+            planner.assert_called_once_with(None, transition_baseline)
         with patch("scripts.prepare_audit.solve", return_value=None):
             with self.assertRaises(RuntimeError):
-                make_actions(None, "full")
+                make_actions(None)
 
     def test_changed_human_materials_are_not_overwritten(self):
         with tempfile.TemporaryDirectory() as folder:
