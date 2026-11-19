@@ -90,11 +90,11 @@ def map_image(env, tile_size=40):
     return canvas
 
 
-STYLE = """body{font:17px/1.55 system-ui,sans-serif;color:#182332;background:#f5f7fa;margin:0}main{max-width:1050px;margin:auto;padding:28px}section{background:white;padding:24px;border-radius:12px;margin:18px 0}img{max-width:100%;height:auto}pre{white-space:pre-wrap;font:15px/1.65 ui-monospace,Consolas,monospace}a{color:#1557a0}nav{display:flex;gap:20px;flex-wrap:wrap}.cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}li{padding:4px}h1{line-height:1.2}code{background:#eef2f6;padding:2px 5px}"""
+STYLE = """body{font:17px/1.55 system-ui,sans-serif;color:#182332;background:#f5f7fa;margin:0}main{max-width:1200px;margin:auto;padding:28px}section{background:white;padding:24px;border-radius:12px;margin:18px 0}img{max-width:100%;height:auto}pre{white-space:pre-wrap;font:15px/1.65 ui-monospace,Consolas,monospace}a{color:#1557a0}nav{display:flex;gap:20px;flex-wrap:wrap}.cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}li{padding:4px}h1{line-height:1.2}code{background:#eef2f6;padding:2px 5px}.case-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:28px;align-items:start}.map-panel{position:sticky;top:16px}.actions{margin:0;padding-left:30px}.actions li{padding:4px 0}@media(max-width:900px){main{padding:16px}.case-layout{grid-template-columns:1fr}.map-panel{position:static}}"""
 
 
 def html_document(title, body):
-    return f'<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)}</title><style>{STYLE}</style><main>{body}</main></html>\n'
+    return f'<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>{escape(title)}</title><style>{STYLE}</style><main>{body}</main></html>\n'
 
 
 def case_html(record, previous_id=None, next_id=None):
@@ -103,10 +103,15 @@ def case_html(record, previous_id=None, next_id=None):
         nav += f' <a href="{previous_id}.html">Предыдущий</a>'
     if next_id:
         nav += f' <a href="{next_id}.html">Следующий</a>'
-    text = escape(record["content"])
+    description, remainder = record["content"].split("\n\nПоследовательность действий:\n", 1)
+    _, question = remainder.split("\n\nВопрос:", 1)
+    actions = ''.join(
+        f'<li><code>{ACTION_NAMES[action]}</code> — {ACTION_RU[action]}</li>'
+        for action in record["actions"]
+    )
     body = f'<nav>{nav}</nav><h1>{record["id"]}</h1><p>Группа: {record["group"]}. Оцените только указанную последовательность действий.</p>'
-    body += f'<section><h2>Начальная карта</h2><img src="maps/{record["id"]}.png" alt="Начальная карта с координатами. Красный треугольник — агент."><p>Красный треугольник — агент, его вершина показывает направление взгляда. Цвета дверей и предметов уточнены ниже.</p></section>'
-    body += f'<section><h2>Условие и действия</h2><pre>{text}</pre></section>'
+    body += f'<section><div class="case-layout"><div class="map-panel"><h2>Начальная карта</h2><img src="maps/{record["id"]}.png" alt="Начальная карта с координатами. Красный треугольник — агент."><p>Красный треугольник — агент, его вершина показывает направление взгляда. Цвета дверей и предметов уточнены ниже.</p></div><div><h2>Последовательность действий</h2><ol class="actions">{actions}</ol></div></div></section>'
+    body += f'<section><h2>Условие</h2><pre>{escape(description)}</pre><p>Вопрос:{escape(question)}</p></section>'
     body += '<section><h2>Как записать ответ</h2><p>В своей строке annotations.csv укажите <code>success</code> или <code>failure</code> и время в секундах. Страница не сохраняет ответы. Не обсуждайте метку с другими до сохранения своего суждения.</p><p>Оценивайте по настоящим правилам MiniGrid из инструкции. Не запускайте модели и не ищите машинные вердикты.</p></section>'
     return html_document(record["id"], body)
 
