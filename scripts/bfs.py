@@ -91,24 +91,20 @@ def transition_full(state, action, walls, door_positions, door_colors):
 
 
 def transition_baseline(state, action, walls, door_positions, door_colors):
-    """Ignore key colors and allow adjacent keys to be picked up without turning."""
+    """Allow picking up keys in front or directly below; preserve key colors."""
     position, direction, carrying, door_states, objects = state
     if action == PICKUP and carrying is None:
         items = dict(objects)
-        # Prefer the front cell (including normal ball pickup), then right,
-        # behind, and left. Only keys can be picked up without facing them.
-        for offset in range(4):
-            dx, dy = DIRECTIONS[(direction + offset) % 4]
-            target = (position[0] + dx, position[1] + dy)
+        dx, dy = DIRECTIONS[direction]
+        front = (position[0] + dx, position[1] + dy)
+        below = (position[0], position[1] + 1)
+        for target in (front, below):
             item = items.get(target)
-            if item is not None and (offset == 0 or item[0] == "key"):
+            if item is not None and (target == front or item[0] == "key"):
                 items.pop(target)
                 child = (position, direction, item, door_states, frozenset(items.items()))
                 return child, item[0] == "ball"
 
-    if action == TOGGLE and carrying is not None and carrying[0] == "key":
-        # Reuse full door mechanics, treating every door as matching this key.
-        door_colors = (carrying[1],) * len(door_colors)
     return transition_full(state, action, walls, door_positions, door_colors)
 
 
