@@ -3,12 +3,13 @@
 import argparse
 from html import escape
 import json
+from math import atan2, cos, sin
 from pathlib import Path
 
 import gymnasium as gym
 from PIL import Image, ImageDraw
 
-from scripts.bfs import ENV_ID, solve, transition_baseline
+from scripts.bfs import DIRECTIONS, ENV_ID, FORWARD, LEFT, RIGHT, read_world, solve, transition_baseline
 from scripts.generate_configurations import verify_records, write_records
 
 ACTION_NAMES = ("left", "right", "forward", "pickup", "drop", "toggle")
@@ -77,11 +78,51 @@ def case_content(env, actions):
     return description + "\n\nПоследовательность действий:\n" + steps + "\n\nВопрос: будет ли мяч взят до конца этой последовательности и до тайм-аута? Метка: success или failure."
 
 
-def map_image(env, tile_size=40):
+def predicted_states(env, actions):
+    walls, door_positions, door_colors, state = read_world(env)
+    states = [state]
+    for action in actions:
+        state, success = transition_baseline(state, action, walls, door_positions, door_colors)
+        states.append(state)
+        if success:
+            break
+    return states
+
+
+def draw_arrow(draw, start, end, fill, width=3):
+    draw.line((start, end), fill=fill, width=width)
+    angle = atan2(end[1] - start[1], end[0] - start[0])
+    size = 7
+    left = (end[0] - size * cos(angle - 0.55), end[1] - size * sin(angle - 0.55))
+    right = (end[0] - size * cos(angle + 0.55), end[1] - size * sin(angle + 0.55))
+    draw.polygon((end, left, right), fill=fill)
+
+
+def map_image(env, tile_size=40, actions=None):
     image = Image.fromarray(env.unwrapped.get_frame(highlight=False, tile_size=tile_size))
     margin = 28
     canvas = Image.new("RGB", (image.width + margin, image.height + margin), "white")
     canvas.paste(image, (margin, margin))
+    if actions is not None:
+        states = predicted_states(env, actions)
+        overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        def center(position):
+            return (margin + int(position[0]) * tile_size + tile_size // 2,
+                    margin + int(position[1]) * tile_size + tile_size // 2)
+
+        for action, before, after in zip(actions, states, states[1:]):
+            if action == FORWARD and before[0] != after[0]:
+                draw_arrow(draw, center(before[0]), center(after[0]), (0, 190, 255, 220), 4)
+            elif action in (LEFT, RIGHT):
+                x, y = center(before[0])
+                old_dx, old_dy = DIRECTIONS[before[1]]
+                new_dx, new_dy = DIRECTIONS[after[1]]
+                start = (x + old_dx * 13, y + old_dy * 13)
+                end = (x + new_dx * 13, y + new_dy * 13)
+                draw_arrow(draw, start, end, (255, 170, 0, 240), 2)
+        canvas = Image.alpha_composite(canvas.convert("RGBA"), overlay).convert("RGB")
     draw = ImageDraw.Draw(canvas)
     for x in range(env.unwrapped.width):
         draw.text((margin + x * tile_size + 14, 5), str(x), fill="black")
@@ -110,7 +151,7 @@ def case_html(record, previous_id=None, next_id=None):
         for action in record["actions"]
     )
     body = f'<nav>{nav}</nav><h1>{record["id"]}</h1><p>Группа: {record["group"]}. Оцените только указанную последовательность действий.</p>'
-    body += f'<section><div class="case-layout"><div class="map-panel"><h2>Начальная карта</h2><img src="maps/{record["id"]}.png" alt="Начальная карта с координатами. Красный треугольник — агент."><p>Красный треугольник — агент, его вершина показывает направление взгляда. Цвета дверей и предметов уточнены ниже.</p></div><div><h2>Последовательность действий</h2><ol class="actions">{actions}</ol></div></div></section>'
+    body += f'<section><div class="case-layout"><div class="map-panel"><h2>Карта и прогноз BFS</h2><img src="maps/{record["id"]}.png" alt="Начальная карта с координатами и предсказанной BFS траекторией."><p>Красный треугольник — агент, его вершина показывает направление взгляда. Цвета дверей и предметов уточнены ниже.</p><p>Голубые линии показывают перемещения, оранжевые стрелки — повороты. Это только прогноз упрощённого BFS по указанным действиям, а не фактическое выполнение среды; прогноз может быть ошибочным.</p></div><div><h2>Последовательность действий</h2><ol class="actions">{actions}</ol></div></div></section>'
     body += f'<section><h2>Условие</h2><pre>{escape(description)}</pre><p>Вопрос:{escape(question)}</p></section>'
     body += '<section><h2>Как записать ответ</h2><p>В своей строке annotations.csv укажите <code>success</code> или <code>failure</code> и время в секундах. Страница не сохраняет ответы. Не обсуждайте метку с другими до сохранения своего суждения.</p><p>Оценивайте по настоящим правилам MiniGrid из инструкции. Не запускайте модели и не ищите машинные вердикты.</p></section>'
     return html_document(record["id"], body)
@@ -154,7 +195,7 @@ def prepare(configurations_path, audit_dir):
                 "content": case_content(env, actions),
                 "materials": {"page": f"materials/{config['id']}.html", "map": f"materials/maps/{config['id']}.png"},
             })
-            images.append(map_image(env))
+            images.append(map_image(env, actions=actions))
         finally:
             env.close()
     # Prepare all plans before writing. No evaluator or real action replay here.

@@ -9,13 +9,13 @@ from unittest.mock import patch
 import gymnasium as gym
 from PIL import Image
 
-from scripts.bfs import solve, transition_baseline
+from scripts.bfs import ENV_ID, solve, transition_baseline
 from scripts.export_predictions import (
     PUBLIC_FIELDS, REPOSITORY, export_predictions, validate_destination, validate_slice,
 )
 from scripts.prepare_audit import (
     ACTION_NAMES, case_html, index_html, make_actions, map_image,
-    read_jsonl, write_text_once,
+    predicted_states, read_jsonl, write_text_once,
 )
 
 
@@ -65,7 +65,7 @@ class AuditTests(unittest.TestCase):
                 env = gym.make(record["env_id"])
                 try:
                     env.reset(seed=record["seed"])
-                    self.assertEqual(image.convert("RGB").tobytes(), map_image(env).tobytes())
+                    self.assertEqual(image.convert("RGB").tobytes(), map_image(env, actions=record["actions"]).tobytes())
                 finally:
                     env.close()
 
@@ -108,6 +108,19 @@ class AuditTests(unittest.TestCase):
         with patch("scripts.prepare_audit.solve", return_value=None):
             with self.assertRaises(RuntimeError):
                 make_actions(None)
+
+    def test_predicted_trace_uses_model_without_replaying_environment(self):
+        env = gym.make(ENV_ID)
+        try:
+            env.reset(seed=0)
+            actions = solve(env, transition_baseline)
+            states = predicted_states(env, actions)
+            self.assertEqual(len(states), len(actions) + 1)
+            self.assertEqual(states[-1][2][0], "ball")
+            self.assertEqual(env.unwrapped.step_count, 0)
+            self.assertIsNone(env.unwrapped.carrying)
+        finally:
+            env.close()
 
     def test_changed_human_materials_are_not_overwritten(self):
         with tempfile.TemporaryDirectory() as folder:
