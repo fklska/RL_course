@@ -39,35 +39,50 @@
 `python -m scripts.bfs`, `python -m scripts.render`.
 
 ```text
-project/
+RL_course/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
+├── main.py
 ├── scripts/
 │   ├── __init__.py
-│   ├── bfs.py                    # поиск, модели и оценка готовых планов
-│   ├── render.py                 # просмотр и GIF выполнения плана
-│   ├── generate_configurations.py # генерация и проверка начальных карт
-│   ├── prepare_audit.py           # траектории, JSONL и карточки без вердиктов
-│   └── export_predictions.py      # отдельная выгрузка ответов для куратора
+│   ├── bfs.py                       # BFS и модели переходов
+│   ├── render.py                    # визуализация выполнения
+│   ├── generate_configurations.py   # генерация начальных сред
+│   ├── prepare_audit.py             # подготовка траекторий и карточек
+│   ├── export_predictions.py        # выгрузка предсказаний моделей
+│   ├── finalize_audit.py            # проверка разметки и сбор результатов
+│   ├── run_probes.py                # запуск зондов
+│   └── team_metrics.py              # расчёт командных метрик
 ├── tests/
 │   ├── __init__.py
 │   ├── test_bfs.py
 │   ├── test_configurations.py
-│   └── test_audit.py
+│   ├── test_audit.py
+│   ├── test_probes.py
+│   └── test_team_metrics.py
 ├── templates/
-│   └── instruction_template.md   # исходный шаблон разметки
+│   └── instruction_template.md
 ├── data/
-│   └── configurations.jsonl       # 52 конфигурации без действий и вердиктов
-├── audit/                       # единая папка аудита команды
+│   └── configurations.jsonl         # 52 начальные конфигурации
+├── audit/
 │   ├── .gitkeep
-│   ├── slice.jsonl              # 52 объекта без машинных вердиктов
-│   ├── instruction.md           # инструкция версии 1.0
+│   ├── slice.jsonl                  # 52 объекта для аудита
+│   ├── instruction.md
+│   ├── annotations.csv              # человеческая разметка
+│   ├── baseline_predictions.csv
+│   ├── scorer.jsonl                 # вердикты полной модели
+│   ├── probe_results.csv
+│   ├── team_metrics.md              # отчёт по метрикам
+│   ├── разметка.xlsx
 │   └── materials/
-│       ├── index.html           # открывается локально в браузере
+│       ├── index.html
 │       ├── K04-001.html … K04-052.html
 │       └── maps/
 │           └── K04-001.png … K04-052.png
-└── notebooks/                   # личные заполненные учебные ноутбуки
-    └── .gitkeep
+└── notebooks/
+    ├── .gitkeep
+    ├── K04_A1_ТомашукАМ_lab3_student.ipynb
+    ├── K04_A2_lab3_student.ipynb
+    └── K04_A3_lab3_student_ipynb.ipynb
 ```
